@@ -1,0 +1,33 @@
+/* carousel csses */
+.carousel .card {
+  height: 100%;
+  border: 1px solid #f1ebe2;
+}
+
+.carousel .card-image {
+  background: white;
+}
+
+.carousel .card-image .image img {
+  object-fit: contain;
+  height: 300px;
+}
+
+.carousel .card-content .rating {
+  display: flex;
+}
+
+@media(width >= 1024px) {
+  .carousel .card-image .image img {
+    max-height: 380px;
+    height: 100%;
+  }
+  
+  .carousel .card-image {
+    height: 100%;
+  }
+  
+  .carousel .card-image .image {
+    height: 100%;
+  }
+}

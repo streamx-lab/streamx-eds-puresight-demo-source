@@ -1,0 +1,12 @@
+/* article css'es */
+
+.blog-article-author-bio >.id .role {
+  /* stylelint-disable-next-line custom-property-pattern */
+  color: var(--color-primary--800) !important;
+}
+
+@media (width >= 1024px) {
+  body.article .sticky-container {
+    top: var(--nav-height);
+  }
+}

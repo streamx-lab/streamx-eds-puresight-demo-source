@@ -2,6 +2,10 @@ Please always provide the [GitHub issue(s)](../issues) your PR is for, as well a
 
 Fix #<gh-issue-id>
 
-Test URLs:
-- Before: https://main--{repo}--{owner}.aem.live/
-- After: https://<branch>--{repo}--{owner}.aem.live/
+Test URLs preview:
+- Before https://main--streamx-eds-puresight-demo-source--streamx-lab.hlx.page/
+- https://<your-branch-name>--streamx-eds-puresight-demo-source--streamx-lab.aem.page/
+
+Test URLs live:
+- Before: https://main--streamx-eds-puresight-demo-source--streamx-lab.hlx.live/
+- After: https://<your-branch-name>--streamx-eds-puresight-demo-source--streamx-lab.aem.live/

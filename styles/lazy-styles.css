@@ -1,1 +1,4 @@
 /* add global styles that can be loaded post LCP here */
+
+@import url('//fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Roboto&display=swap');
+@import url('../libs/kyanite/mdi/css/mdi.7.2.96.min.css');

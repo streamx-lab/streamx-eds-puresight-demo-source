@@ -1,0 +1,7 @@
+.product-detail.block .icon {
+  height: 24px;
+}
+
+.product-detail.block .main-image {
+  aspect-ratio: 1/1;
+}

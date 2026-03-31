@@ -1,0 +1,21 @@
+/* cards list css'es */
+.product-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2%;
+    width: 100%;
+}
+
+.product-tiles .card {
+    width: 23.5%;
+}
+
+.product-tiles .card .image {
+    border: 1px solid #f1ebe2;
+    height: 22vw;
+}
+
+.product-tiles .card .image img {
+    height: 100%;
+    object-fit: contain;
+}
