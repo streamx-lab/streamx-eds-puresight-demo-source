@@ -1,35 +1,31 @@
 import {
-  buildBlock,
+  sampleRUM,
   loadHeader,
   loadFooter,
+  decorateButtons,
   decorateIcons,
   decorateSections,
   decorateBlocks,
   decorateTemplateAndTheme,
-  waitForFirstImage,
-  loadSection,
-  loadSections,
+  waitForLCP,
+  loadBlocks,
   loadCSS,
+  getMetadata,
 } from './aem.js';
+import { loadTemplate } from './commons.js';
 
-/**
- * Builds hero block and prepends to main in a new section.
- * @param {Element} main The container element
- */
-function buildHeroBlock(main) {
-  const h1 = main.querySelector('h1');
-  const picture = main.querySelector('picture');
-  // eslint-disable-next-line no-bitwise
-  if (h1 && picture && (h1.compareDocumentPosition(picture) & Node.DOCUMENT_POSITION_PRECEDING)) {
-    // Check if h1 or picture is already inside a hero block
-    if (h1.closest('.hero') || picture.closest('.hero')) {
-      return; // Don't create a duplicate hero block
-    }
-    const section = document.createElement('div');
-    section.append(buildBlock('hero', { elems: [picture, h1] }));
-    main.prepend(section);
-  }
-}
+const PURESIGHT_DEMO_LOAD_EVENT = 'puresight-demo--loaded';
+
+const loadDependenciesLibs = async () => {
+  window.KYANITE_ON_LOAD = PURESIGHT_DEMO_LOAD_EVENT;
+  window.KYANITE_ON_DOM_CONTENT_LOAD = PURESIGHT_DEMO_LOAD_EVENT;
+
+  // dynamic import because the KYANITE_ON_LOAD_CUSTOM_EVENT must be set first
+  await import('../libs/kyanite/main.published.js');
+  await import('../libs/kyanite/main.js');
+};
+
+const LCP_BLOCKS = []; // add your LCP blocks to the list
 
 /**
  * load fonts.css and set a session storage flag
@@ -43,75 +39,37 @@ async function loadFonts() {
   }
 }
 
-/**
- * Builds all synthetic blocks in a container element.
- * @param {Element} main The container element
- */
-function buildAutoBlocks(main) {
-  try {
-    // auto load `*/fragments/*` references
-    const fragments = [...main.querySelectorAll('a[href*="/fragments/"]')].filter((f) => !f.closest('.fragment'));
-    if (fragments.length > 0) {
-      // eslint-disable-next-line import/no-cycle
-      import('../blocks/fragment/fragment.js').then(({ loadFragment }) => {
-        fragments.forEach(async (fragment) => {
-          try {
-            const { pathname } = new URL(fragment.href);
-            const frag = await loadFragment(pathname);
-            fragment.parentElement.replaceWith(...frag.children);
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error('Fragment loading failed', error);
-          }
-        });
-      });
-    }
+const customDecorateIcons = (element) => {
+  const iconsList = element.querySelectorAll('span.icon');
+  const svgIcons = [];
 
-    buildHeroBlock(main);
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Auto Blocking failed', error);
-  }
-}
+  iconsList.forEach((icon) => {
+    const mdiClass = [...icon.classList].find((el) => el.startsWith('icon-mdi-'));
+    if (mdiClass) {
+      const iconName = mdiClass.split('icon-')[1];
+      const iconFragment = document.createRange().createContextualFragment(`
+        <span class="icon">
+          <i class="mdi ${iconName}" aria-hidden="false"></i>
+        </span>
+      `);
 
-/**
- * Decorates formatted links to style them as buttons.
- * @param {HTMLElement} main The main container element
- */
-function decorateButtons(main) {
-  main.querySelectorAll('p a[href]').forEach((a) => {
-    a.title = a.title || a.textContent;
-    const p = a.closest('p');
-    const text = a.textContent.trim();
-
-    // quick structural checks
-    if (a.querySelector('img') || p.textContent.trim() !== text) return;
-
-    // skip URL display links
-    try {
-      if (new URL(a.href).href === new URL(text, window.location).href) return;
-    } catch { /* continue */ }
-
-    // require authored formatting for buttonization
-    const strong = a.closest('strong');
-    const em = a.closest('em');
-    if (!strong && !em) return;
-
-    p.className = 'button-wrapper';
-    a.className = 'button';
-    if (strong && em) { // high-impact call-to-action
-      a.classList.add('accent');
-      const outer = strong.contains(em) ? strong : em;
-      outer.replaceWith(a);
-    } else if (strong) {
-      a.classList.add('primary');
-      strong.replaceWith(a);
+      icon.replaceWith(iconFragment);
     } else {
-      a.classList.add('secondary');
-      em.replaceWith(a);
+      svgIcons.push(svgIcons);
+      decorateIcons(icon);
     }
   });
-}
+};
+
+const handleDefaultContent = (main) => {
+  const defaultContentElements = [...main.querySelectorAll('.default-content-wrapper')];
+
+  defaultContentElements.forEach((dc) => {
+    [...dc.querySelectorAll('h1, h2, h3, h4, h5, h6')].forEach((heading) => {
+      heading.classList.add('title', `is-${heading.tagName.substring(1)}`, 'has-text-grey-900');
+    });
+  });
+};
 
 /**
  * Decorates the main element.
@@ -119,11 +77,12 @@ function decorateButtons(main) {
  */
 // eslint-disable-next-line import/prefer-default-export
 export function decorateMain(main) {
-  decorateIcons(main);
-  buildAutoBlocks(main);
+  // hopefully forward compatible button decoration
+  decorateButtons(main);
+  customDecorateIcons(main);
   decorateSections(main);
   decorateBlocks(main);
-  decorateButtons(main);
+  handleDefaultContent(main);
 }
 
 /**
@@ -136,8 +95,10 @@ async function loadEager(doc) {
   const main = doc.querySelector('main');
   if (main) {
     decorateMain(main);
+    const templateName = getMetadata('template');
+    if (templateName) await loadTemplate(doc, templateName);
     document.body.classList.add('appear');
-    await loadSection(main.querySelector('.section'), waitForFirstImage);
+    await waitForLCP(LCP_BLOCKS);
   }
 
   try {
@@ -155,19 +116,27 @@ async function loadEager(doc) {
  * @param {Element} doc The container element
  */
 async function loadLazy(doc) {
-  loadHeader(doc.querySelector('header'));
-
   const main = doc.querySelector('main');
-  await loadSections(main);
+  await loadBlocks(main);
+  await loadDependenciesLibs();
 
   const { hash } = window.location;
   const element = hash ? doc.getElementById(hash.substring(1)) : false;
   if (hash && element) element.scrollIntoView();
 
-  loadFooter(doc.querySelector('footer'));
+  await loadHeader(doc.querySelector('header'));
+  await loadFooter(doc.querySelector('footer'));
+
+  // dispatching event for window 'load' and document 'DOMContentLoaded`
+  window.dispatchEvent(new CustomEvent(PURESIGHT_DEMO_LOAD_EVENT));
+  document.dispatchEvent(new CustomEvent(PURESIGHT_DEMO_LOAD_EVENT));
 
   loadCSS(`${window.hlx.codeBasePath}/styles/lazy-styles.css`);
   loadFonts();
+
+  sampleRUM('lazy');
+  sampleRUM.observe(main.querySelectorAll('div[data-block-name]'));
+  sampleRUM.observe(main.querySelectorAll('picture > img'));
 }
 
 /**
