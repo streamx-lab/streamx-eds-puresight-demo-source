@@ -8,6 +8,7 @@ on:
         required: false
         type: boolean
         default: false
+
   pull_request:
     types:
       - closed
@@ -22,6 +23,7 @@ jobs:
   sync-pr-with-streamx:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,9 +38,9 @@ jobs:
           source-provider: PullRequestDiffSourceProvider
           streamx-ingestion-url: ${{ vars.STREAMX_INGESTION_URL }}
           streamx-ingestion-token: ${{ secrets.STREAMX_INGESTION_GH_TOKEN }}
-          event-type: 'com.streamx.blueprints.web-resource.published.v1'
-          deleted-event-type: 'com.streamx.blueprints.web-resource.unpublished.v1'
-          event-data: '{"type": "web-resource/static"}'
+          event-type: "com.streamx.blueprints.web-resource.published.v1"
+          deleted-event-type: "com.streamx.blueprints.web-resource.unpublished.v1"
+          event-data: '{"type":"web-resource/static"}'
           include-patterns: ${{ vars.STREAMX_INGESTION_INCLUDES }}
 
   sync-all-with-streamx:
@@ -60,3 +62,86 @@ jobs:
           workspace: ${{ github.workspace }}
           event-data: '{"type": "web-resource/static"}'
           include-patterns: ${{ vars.STREAMX_INGESTION_INCLUDES }}
+
+  schedule-index-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up homebrew
+        uses: 'Homebrew/actions/setup-homebrew@master'
+
+      - name: Install and setup StreamX
+        run: |
+          brew install streamx-com/preview-tap/streamx
+          streamx settings set streamx.ingestion.url ${{ vars.STREAMX_INGESTION_URL }}
+          streamx settings set streamx.ingestion.auth-token ${{ secrets.STREAMX_INGESTION_GH_TOKEN }}
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Generate and publish stream
+        shell: bash
+        env:
+          EDS_URL: ${{ vars.EDS_URL }}
+          STREAMX_TOKEN: ${{ secrets.STREAMX_INGESTION_GH_TOKEN }}
+        run: |
+          set -e
+
+          echo "Generating event stream..."
+
+          targets=()
+
+          while IFS= read -r line; do
+            targets+=("$line")
+          done < <(
+            yq e '.. | select(has("target")) | .target' \
+            ./helix-query.yaml
+          )
+
+          stream_file="stream.jsonl"
+          > "$stream_file"
+
+          for target in "${targets[@]}"; do
+            if [ -z "$target" ]; then
+              continue
+            fi
+
+            clean="${target#/}"
+            filename=$(echo "$clean" | sed 's/\//_/g')
+
+            uuid=$(uuidgen)
+            time=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+            url="${EDS_URL}/${filename}"
+
+            cat >> "$stream_file" <<EOF
+          {
+            "specversion": "1.0",
+            "id": "${uuid}",
+            "source": "github",
+            "type": "com.streamx.blueprints.download.schedule.v1",
+            "datacontenttype": "application/json",
+            "subject": "${filename}",
+            "time": "${time}",
+            "data": {
+              "url": "${url}/${filename}",
+              "emitKey": "${filename}",
+              "emittedPageType": "",
+              "emittedWebResourceType": "web-resource/static",
+              "emittedAssetType": ""
+            }
+          }
+          EOF
+          
+          done
+          
+          echo "Publishing stream to StreamX..."
+          
+          streamx publish stream "$stream_file"
+          
+          echo "Done."
