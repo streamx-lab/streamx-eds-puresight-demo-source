@@ -129,7 +129,7 @@ jobs:
             "subject": "${filename}",
             "time": "${time}",
             "data": {
-              "url": "${url}/${filename}",
+              "url": "${url}",
               "emitKey": "${filename}",
               "emittedPageType": "",
               "emittedWebResourceType": "web-resource/static",
