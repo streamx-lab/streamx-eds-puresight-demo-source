@@ -40,6 +40,7 @@ jobs:
           echo "streamx_subject=${streamx_subject}" >> "$GITHUB_OUTPUT"
           echo "eds_page_url=$eds_page_url" >> "$GITHUB_OUTPUT"
           echo "streamx_subject_plain=$streamx_subject.plain.html" >> "$GITHUB_OUTPUT"
+          echo "streamx_subject_html=$streamx_subject.html" >> "$GITHUB_OUTPUT"
           echo "eds_plain_page_url=$eds_plain_page_url" >> "$GITHUB_OUTPUT"
 
       - name: Run publish to StreamX
@@ -54,7 +55,7 @@ jobs:
           event-type: 'com.streamx.blueprints.page.published.v1'
           event-data: '{"type": "page/eds"}'
           external-resource-url: ${{ steps.vars.outputs.eds_page_url }}
-          subject: ${{ steps.vars.outputs.streamx_subject }}
+          subject: ${{ steps.vars.outputs.streamx_subject_html }}
 
       - name: Run publish plain nav/footer to StreamX
         if: (endsWith(steps.vars.outputs.streamx_subject_plain, 'nav.plain.html') || endsWith(steps.vars.outputs.streamx_subject_plain, 'footer.plain.html'))
