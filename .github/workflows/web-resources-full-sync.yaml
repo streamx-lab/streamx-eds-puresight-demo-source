@@ -87,7 +87,7 @@ jobs:
       - name: Generate and publish stream
         shell: bash
         env:
-          EDS_URL: ${{ vars.EDS_URL }}
+          EDS_URL: ${{ vars.EDS_DOMAIN_URL }}
           STREAMX_TOKEN: ${{ secrets.STREAMX_INGESTION_GH_TOKEN }}
         run: |
           set -e
