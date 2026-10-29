@@ -27,13 +27,17 @@ jobs:
       - name: Prepare ingestion variables
         id: vars
         shell: bash
+        env:
+          RESOURCE_PATH: ${{ github.event.client_payload.path }}
         run: |
           sleep 1s
-          streamx_subject=$(echo "${{ github.event.client_payload.path }}" | sed 's/\.md$//g')        
+          base_subject="${RESOURCE_PATH%.md}"
+          streamx_subject="${base_subject}.html"
+          streamx_subject_plain="${base_subject}.plain.html"
           echo "CloudEvent subject: ${streamx_subject}"
-          echo "CloudEvent subject plain:: $streamx_subject.plain.html"
+          echo "CloudEvent subject plain: ${streamx_subject_plain}"
           echo "streamx_subject=${streamx_subject}" >> "$GITHUB_OUTPUT"
-          echo "streamx_subject_plain=$streamx_subject.plain.html" >> "$GITHUB_OUTPUT"
+          echo "streamx_subject_plain=${streamx_subject_plain}" >> "$GITHUB_OUTPUT"
 
       - name: Run unpublish from StreamX
         uses: streamx-hub/streamx-common-github-actions/.github/actions/connector-github@v1

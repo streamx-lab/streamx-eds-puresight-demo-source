@@ -27,19 +27,29 @@ jobs:
       - name: Prepare ingestion variables
         id: vars
         shell: bash
+        env:
+          RESOURCE_PATH: ${{ github.event.client_payload.path }}
+          EDS_DOMAIN_URL: ${{ vars.EDS_DOMAIN_URL }}
         run: |
           sleep 1s
-          streamx_subject=$(echo "${{ github.event.client_payload.path }}" | sed 's/\.md$//g')
-          page_path=$(echo "${{ github.event.client_payload.path }}" | sed 's/\.md$//g' | sed 's/index//g')
-          eds_page_url="${{ vars.EDS_DOMAIN_URL }}$page_path"
-          eds_plain_page_url="${{ vars.EDS_DOMAIN_URL }}$streamx_subject.plain.html"
+          base_subject="${RESOURCE_PATH%.md}"
+          streamx_subject="${base_subject}.html"
+          page_path="$base_subject"
+          if [[ "$page_path" == "/index" ]]; then
+            page_path="/"
+          elif [[ "$page_path" == */index ]]; then
+            page_path="${page_path%index}"
+          fi
+          eds_page_url="${EDS_DOMAIN_URL%/}${page_path}"
+          streamx_subject_plain="${base_subject}.plain.html"
+          eds_plain_page_url="${EDS_DOMAIN_URL%/}${streamx_subject_plain}"
           echo "Page URL: $eds_page_url"
           echo "CloudEvent subject: ${streamx_subject}"
           echo "Plain page URL: $eds_plain_page_url"
-          echo "CloudEvent subject plain: $streamx_subject.plain.html"
+          echo "CloudEvent subject plain: ${streamx_subject_plain}"
           echo "streamx_subject=${streamx_subject}" >> "$GITHUB_OUTPUT"
           echo "eds_page_url=$eds_page_url" >> "$GITHUB_OUTPUT"
-          echo "streamx_subject_plain=$streamx_subject.plain.html" >> "$GITHUB_OUTPUT"
+          echo "streamx_subject_plain=${streamx_subject_plain}" >> "$GITHUB_OUTPUT"
           echo "eds_plain_page_url=$eds_plain_page_url" >> "$GITHUB_OUTPUT"
 
       - name: Run publish to StreamX
