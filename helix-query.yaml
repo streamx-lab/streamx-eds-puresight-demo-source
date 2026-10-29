@@ -1,7 +1,7 @@
 indices:
   blog:
     include:
-      - /edge-delivery-services-demo/articles/**
+      - /articles/**
     target: /query-index.json
     properties:
       heading:
